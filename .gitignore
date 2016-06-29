@@ -1,0 +1,20 @@
+
+# Temp files
+*~
+\#*\#
+.*.swp
+
+# YE Genotype file
+Yaniv_Erlich_Genome.txt
+Yaniv_Erlich_Genome.txt.gz
+
+# dbSNP138 files
+snp138Common.txt.gz
+snp138Common.txt
+snp138Common.txt.t
+snp138Common.fixed.txt
+snp138Common.fixed.txt.gz
+snp138Common.fixed.txt.gz.tbi
+snps138.rejected
+snps138.good
+
