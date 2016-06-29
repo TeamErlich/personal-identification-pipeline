@@ -1,0 +1,20 @@
+# This file contains a list of required python modules for the
+# personal-identification-pipeline.
+
+# NOTE: scipy and matplotlib modules are installed using the pre-packages
+#       standard ubuntu packages 'python-scipy' and 'python-matplotlib'.
+#       (see ./setup/setup-ubuntu1404.sh).
+#
+#       To install them manually (or when not using ubuntu), uncomment the
+#       following lines:
+#numpy
+#scipy>=0.13.3
+#matplotlib
+
+# Cython is required to properly build pysam:
+# https://github.com/pysam-developers/pysam/issues/306
+cython
+pysam>=0.8.3
+
+# poretools is used as a command-line program, not a python import.
+poretools>=0.5.1
