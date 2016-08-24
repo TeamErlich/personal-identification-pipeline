@@ -137,7 +137,7 @@ parse_parameters()
     test -n "$show_help" && show_help_and_exit
 
     # Parameters passed to 'calc-match-prob.py'
-    _x="-p $cpus"
+    _x=
     test -n "$output_basename" && _x="$_x -b"
     test -n "$verbose" && _x="$_x -v"
     test -n "$use_q" && _x="$_x -q"
@@ -386,10 +386,11 @@ log "Sorting SNP list"
 ##
 log "running: pipeline step 3 (calc-probabilities)"
 
-find "$candidateDir" \( -type f -o -type l \) -print0 \
+find "$candidatesDir" \( -type f -o -type l \) -print0 \
     | xargs -0 -I% -n1 -P"$cpus" \
-          stdbuf -oL calc-match-probs.py $calc_prob_params "$infile" %
-    > "$outputDir/$sampleName.unsorted.matches" \
+        stdbuf -oL \
+          calc-match-probs.py $calc_prob_params "$outputDir/$sampleName.snps" % \
+          > "$outputDir/$sampleName.unsorted.matches" \
     || die "calc-match-probs.py failed"
 
 log "Sorting Match Probabilities"
