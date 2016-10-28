@@ -9,7 +9,7 @@ All Rights Reserved.
 This software is restricted to educational, research, not-for-profit purposes.
 See LICENSE file for full details.
 
-Version 0.3.1
+Version 0.3.2
 "
 
 # TODO: allow some defaults for datafiles (genome-ref, snp-db?)
@@ -49,12 +49,11 @@ This script runs the MinION Personal Identification pipeline.
 It extracts SNPs from a minION sequencing run, compares them against
 a know set of 23-and-Me files, and reports possible matches.
 
-Usage: $BASE [OPTIONS] Sample-Name MinION-Reads-DIR 23andMe-DATA-DIR
+Usage: $BASE [OPTIONS] Sample-Name MinION-Reads-DIR
 
 Parameters:
     Sample-Name:         Output files will be created with this name.
     MinION-Reads-DIR:    Directory containing *.FAST5 files from a minION run.
-    23andMe-DATA-DIR:    Directory containing *.txt files in 23-and-Me format.
 
 Options:
     -1	    = run matching algorithm on only 1D minION reads (fwd,rev)
@@ -67,6 +66,11 @@ Options:
     -f FILE = FASTA of human reference genome file with corresponding BWA
               built. Default: search for ./hg19/hg19.fa in same directory as
               this script.
+    -t DIR  = directory containing *.txt files in 23-and-Me format.
+              The MinION/FAST5 sample will be compared against each file
+              in this directory. Either -t or -T must be used.
+    -T      = Skip the last part of the pipeline (matching against 23-and-Me
+              files). Either -t or -T must be used.
     -c      = create Match plot file plotting p(match) for all candidates
     -e 0.xx = use an error rate of 0.xx  (default: 0.15)
               see -e in calc-match-prob.py.
@@ -103,9 +107,11 @@ parse_parameters()
     original_parameters="$*"
     snp_database=""
     humanRefGen=
+    candidatesDir=
+    skip_candidate_matching=
 
     # Parse parameters
-    while getopts 1abce:f:ho:p:qs:v param
+    while getopts 1abce:f:ho:p:qs:t:Tv param
     do
         case $param in
             1)   readType="fwd,rev" ;;
@@ -131,6 +137,8 @@ parse_parameters()
                  ;;
             q)   use_q="_usingQ";;
             s)   snp_database="$OPTARG";;
+            t)   candidatesDir="$OPTARG";;
+            T)   skip_candidate_matching=1;;
             v)   verbose=1;;
             ?)   die "unknown/invalid command line option";;
         esac
@@ -148,11 +156,10 @@ parse_parameters()
     calc_prob_params=$_x
 
     # Check positional parameters
-    test $# -eq 3 || die "expecting 3 parameters. See -h for help."
+    test $# -eq 2 || die "expecting 2 parameters. See -h for help."
 
     sampleName="$1"
     fast5InputDir="$2"
-    candidatesDir="$3"
 
     # being extra strict here, but it's to protect the users
     # from being stupid...
@@ -160,9 +167,6 @@ parse_parameters()
         || die "sample-name ($sampleName) contains forbidden characters"
     test -d "$fast5InputDir" \
         || die "minION-reads-DIR '$fast5InputDir' is not a valid directory"
-    test -d "$candidatesDir" \
-        || die "23-and-Me-DATA-DIR '$candidatesDir' is not a valid directory"
-
 
     # Human Genome Reference File + BWA Index:
     if test -z "$humanRefGen" ; then
@@ -187,7 +191,20 @@ parse_parameters()
     fi
 
 
-    test -z "$snp_database" \
+    # 23-and-Me candidates directory
+    test "$candidatesDir" && test "$skip_candidate_matching" \
+        && die "-t and -T are mutually exclusive. Use only one of them. " \
+               "See -h for help."
+    test -z "$candidatesDir" && test -z "$skip_candidate_matching" \
+        && die "Please use either '-t DIR' or '-T' for 23-and-Me matching or" \
+               "no matching. See -h for help."
+    if test "$candidatesDir" ; then
+        test -d "$candidatesDir" \
+            || die "'$candidatesDir' (-t) is not a valid directory"
+    fi
+
+
+     test -z "$snp_database" \
         && die "missing snp database file (-s FILE). See -h for help."
     test -e "$snp_database" \
         || die "snp database file ($snp_database) not found"
@@ -406,24 +423,28 @@ log "Sorting SNP list"
 ##
 ## Compare the generated SNP list against the 23-and-Me collection.
 ##
-log "running: pipeline step 3 (calc-probabilities)"
+if test "$candidatesDir" ; then
+    log "running: pipeline step 3 (calc-probabilities)"
 
-find "$candidatesDir" \( -type f -o -type l \) -print0 \
-    | xargs -0 -I% -n1 -P"$cpus" \
-        stdbuf -oL \
-          calc-match-probs.py $calc_prob_params "$outputDir/$sampleName.snps" % \
-          > "$outputDir/$sampleName.unsorted.matches" \
-    || die "calc-match-probs.py failed"
+    find "$candidatesDir" \( -type f -o -type l \) -print0 \
+        | xargs -0 -I% -n1 -P"$cpus" \
+            stdbuf -oL \
+             calc-match-probs.py $calc_prob_params "$outputDir/$sampleName.snps" % \
+             > "$outputDir/$sampleName.unsorted.matches" \
+        || die "calc-match-probs.py failed"
 
-log "Sorting Match Probabilities"
-# column 1 is 23-and-Me ref-id,
-# column 6 is read arrival-num.
-( sed -u 1q ; sort -k1,1 -k6n,6 ) < "$outputDir/$sampleName.unsorted.matches" \
-                                  > "$outputDir/$sampleName.matches" \
-    || die "failed to sort match-probabilities"
-
+    log "Sorting Match Probabilities"
+    # column 1 is 23-and-Me ref-id,
+    # column 6 is read arrival-num.
+    ( sed -u 1q ; sort -k1,1 -k6n,6 ) < "$outputDir/$sampleName.unsorted.matches" \
+                                      > "$outputDir/$sampleName.matches" \
+        || die "failed to sort match-probabilities"
+else
+    log "skipping 23-and-Me matching (-T)"
+fi
 
 log "completed."
 log "output Directory: $outputDir"
 log "SNP list: $outputDir/$sampleName.SNP-list.txt"
-log "matches:  $outputDir/$sampleName.matches.tsv"
+test "$candidatesDir" \
+    && log "matches:  $outputDir/$sampleName.matches.tsv"
