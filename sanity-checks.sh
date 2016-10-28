@@ -31,7 +31,7 @@ Usage: $BASE [PREFIX]
 Assumes the following files exist:
   [PREFIX].fastq    - (output of 'poretools fastq')
   [PREFIX].times    - (output of 'poretools times')
-  [PREFIX].sam-dups - (output of 'bwa', before discarding duplicates)
+  [PREFIX].dups.sam - (output of 'bwa', before discarding duplicates)
   [PREFIX].sam      - (output of 'sam-discard-dups.py')
   [PREFIX].bedseq   - (output of 'sam-to-bedseq.py')
   [PREFIX].snps     - (output of 'generate-snp-list.py')
@@ -44,7 +44,7 @@ test $# -ge 1 || die "missing input prefix. See -h for help"
 test "x$1" = "x-h" && show_help_and_exit
 
 prefix="$1"
-for ext in fastq times sam sam-dups bedseq snps ;
+for ext in fastq times sam dups.sam bedseq snps ;
 do
     test -e "$prefix.$ext" \
         || die "file '$prefix.$ext' not found (based on prefix '$prefix')"
@@ -65,7 +65,7 @@ printf "$fmt" "times_num_lines" "$((l-1))" \
         "(number of data lines in $prefix.times)"
 
 ## number of reads in SAM file (with dups and non-mappers)
-l=$(grep -vc '^@' "$prefix.sam-dups")
+l=$(grep -vc '^@' "$prefix.dups.sam")
 printf "$fmt" "sam_dups_num_reads" "$l" \
     "(including non-mappers and multi-mappers)"
 
