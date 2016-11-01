@@ -9,7 +9,7 @@ All Rights Reserved.
 This software is restricted to educational, research, not-for-profit purposes.
 See LICENSE file for full details.
 
-Version 0.3.3
+Version 0.4
 "
 
 set -u
@@ -73,6 +73,8 @@ Options:
     -e 0.xx = use an error rate of 0.xx  (default: 0.15)
               see -e in calc-match-prob.py.
     -h      = This help screen.
+    -m      = Treat multiple minION runs as a single run,
+              use the experiment-start-time of the earliest run.
     -o DIR  = Create and write output files to DIR.
               (default: 'output-YYYY-MM-DD-HHMMSS' based on current time)
     -p N    = use N CPUs (default: auto-detect)
@@ -81,6 +83,8 @@ Options:
               see -q in calc-match-prob.py.
     -s SNP  = SNP database (snp138common.txt file).
               Default: use file in current directory (if exists).
+    -C SEC  = calc-prob cut-off time (in seconds): reads arriving after this
+              number of seconds will be ignored (default: 3600).
     -v      = be verbose
               (add --debug in calc-match-prob.py)
 
@@ -108,21 +112,28 @@ parse_parameters()
     humanRefGen=
     candidatesDir=
     skip_candidate_matching=
+    allow_multiple_exp_starts=
+    calc_prob_cutoff_time=
 
     # Parse parameters
-    while getopts 1abce:f:ho:p:qs:t:Tv param
+    while getopts 1abcC:e:f:hmo:p:qs:t:Tv param
     do
         case $param in
             1)   readType="fwd,rev" ;;
             a)   readType="all" ;;
             b)   output_basename=1;;
             c)	 createPlot=1 ;;
+            C)   calc_prob_cutoff_time="$OPTARG"
+                 echo "$calc_prob_cutoff_time" | grep -qE '^[0-9]+$' \
+                     || die "invalid cut-off time  '-t $calc_prob_cutoff_time'"
+                 ;;
             e)   error_rate="$OPTARG"
                  echo "$error_rate" | grep -qE '^0\.[0-9]+$' \
                      || die "invalid error rate '-e $error_rate'"
                  ;;
             f)   humanRefGen="$OPTARG";;
             h)   show_help=1;;
+            m)   allow_multiple_exp_starts="--allow-multiple-exp-starts";;
             o)   outputDir="$OPTARG"
                  # being extra strict here, but it's to protect the users
                  # from being stupid...
@@ -152,6 +163,7 @@ parse_parameters()
     test -n "$verbose" && _x="$_x -v"
     test -n "$use_q" && _x="$_x -q"
     test -n "$error_rate" && _x="$_x -e $error_rate"
+    test -n "$calc_prob_cutoff_time" && _x="$_x --cutoff-time $calc_prob_cutoff_time"
     calc_prob_params=$_x
 
     # Check positional parameters
@@ -394,7 +406,7 @@ sam-discard-dups.py "$outputDir/$sampleName.dups.sam" \
 ## Create BEDSeq file (BED file + normalized sequences),
 ## as pre-processing step to SNP-Calling
 log "running: sam-to-bedseq"
-sam-to-bedseq.py --times "$outputDir/$sampleName.times" \
+sam-to-bedseq.py $allow_multiple_exp_starts --times "$outputDir/$sampleName.times" \
                  "$outputDir/$sampleName.sam" \
                  > "$outputDir/$sampleName.unsorted.bedseq" \
     || die "sam-to-bedseq.py failed"
@@ -441,11 +453,14 @@ log "Sorting SNP list"
 if test "$candidatesDir" ; then
     log "running: pipeline step 3 (calc-probabilities)"
 
+    # Store header line once (not once-per-file)
+    calc-match-probs.py --only-header > "$outputDir/$sampleName.unsorted.matches"
+
     find "$candidatesDir" \( -type f -o -type l \) -print0 \
         | xargs -0 -I% -n1 -P"$cpus" \
             stdbuf -oL \
-             calc-match-probs.py $calc_prob_params "$outputDir/$sampleName.snps" % \
-             > "$outputDir/$sampleName.unsorted.matches" \
+             calc-match-probs.py --no-header $calc_prob_params "$outputDir/$sampleName.snps" % \
+             >> "$outputDir/$sampleName.unsorted.matches" \
         || die "calc-match-probs.py failed"
 
     log "Sorting Match Probabilities"
