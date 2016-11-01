@@ -4,6 +4,8 @@
 \#*\#
 .*.swp
 
+hg19/
+
 # YE Genotype file
 Yaniv_Erlich_Genome.txt
 Yaniv_Erlich_Genome.txt.gz
