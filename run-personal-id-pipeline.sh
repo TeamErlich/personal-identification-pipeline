@@ -155,7 +155,9 @@ parse_parameters()
     calc_prob_params=$_x
 
     # Check positional parameters
-    test $# -eq 2 || die "expecting 2 parameters. See -h for help."
+    test $# -eq 2 \
+        || die "expecting 2 parameters: [SAMPLE-NAME] [FAST5-DIRECTORY] " \
+               "    See -h for help."
 
     sampleName="$1"
     fast5InputDir="$2"
