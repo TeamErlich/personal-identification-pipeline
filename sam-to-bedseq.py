@@ -226,10 +226,10 @@ def load_timing_file(filename):
             if first_experiment_start_time is None:
                 first_experiment_start_time = experiment_start_time
             if first_experiment_start_time != experiment_start_time:
-                sys.exit(err + "timing time contains exp-start-time from " \
+                sys.exit(err + "timing file contains exp-start-time from " \
                          "several different runs. aborting")
 
-            filename = fields[1]
+            fast5_filename = fields[1]
             try:
                 unix_timestamp_end = int(fields[6])
             except ValueError as e:
@@ -246,7 +246,7 @@ def load_timing_file(filename):
 
 
             timing.append( ReadTiming(
-                             filename,
+                             fast5_filename,
                              unix_timestamp_end,
                              unix_timestamp_end - experiment_start_time,
                              seq_len
