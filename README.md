@@ -92,12 +92,12 @@ The following scripts support help and usage information with
 the `--help` parameter (`-h` in case of the shell script):
 
     run-personal-id-pipeline.sh -h
-    run-parallel-calc-prob.sh -h
     poretools-basenames.py --help
     sam-to-bedseq.py --help
     sam-discard-dups.py --help
-    calc-match-probs.py --help
     generate-snp-list.py --help
+    calc-match-probs.py --help
+    calc-match-probs-parallel.sh --help
 
 
 Contact
