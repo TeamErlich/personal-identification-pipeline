@@ -98,7 +98,7 @@ the `--help` parameter (`-h` in case of the shell script):
     generate-snp-list.py --help
     calc-match-probs.py --help
     calc-match-probs-parallel.sh --help
-
+    filter-high-prob-matches.sh --help
 
 Contact
 -------
