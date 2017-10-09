@@ -11,7 +11,7 @@ https://github.com/TeamErlich/personal-identification-pipeline
 
 Copyright (C) 2016 Yaniv Erlich (yaniv@cs.columbia.edu)
 All Rights Reserved.
-This software is restricted to educational, research, not-for-profit purposes.
+This program is licensed under GPL version 3.
 See LICENSE file for full details.
 
 Version 0.3
